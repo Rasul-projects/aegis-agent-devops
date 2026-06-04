@@ -12,7 +12,7 @@ GITLAB_API_URL = os.getenv("GITLAB_API_URL", "https://gitlab.com/api/v4")
 class AegisAgentEngine:
     def __init__(self):
         self.headers = {"Content-Type": "application/json"}
-        self.gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+       self.gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
 
     def parse_log_trace(self, raw_log_data: str) -> dict:
         # Extract exception signature variables from raw dump
