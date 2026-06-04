@@ -7,15 +7,29 @@ app = Flask(__name__)
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GITLAB_TOKEN = os.getenv("GITLAB_TOKEN")
-GITLAB_API_URL = os.getenv("GITLAB_API_URL", "https://gitlab.com/api/v4")
+GITLAB_API_URL = os.getenv("GITLAB_API_URL", "[https://gitlab.com/api/v4](https://gitlab.com/api/v4)")
 
 class AegisAgentEngine:
     def __init__(self):
-        self.headers = {"Content-Type": "application/json"}
-       self.gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+        # Explicitly passing the API key via X-goog-api-key header format
+        self.headers = {
+            "Content-Type": "application/json",
+            "X-goog-api-key": GEMINI_API_KEY
+        }
+        self.gemini_url = "[https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent](https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent)"
+
+    def clean_markdown_json(self, text: str) -> str:
+        """Safely cleans out any markdown block formatting wrapper strings."""
+        text = text.strip()
+        if text.startswith("```json"):
+            text = text[7:]
+        elif text.startswith("```"):
+            text = text[3:]
+        if text.endswith("```"):
+            text = text[:-3]
+        return text.strip()
 
     def parse_log_trace(self, raw_log_data: str) -> dict:
-        # Extract exception signature variables from raw dump
         prompt = (
             "Parse this raw log trace. Isolate the crash error type, target file path, "
             "and exact line number. Return ONLY a valid minified JSON object with keys: "
@@ -27,19 +41,15 @@ class AegisAgentEngine:
         try:
             res = requests.post(self.gemini_url, headers=self.headers, json=payload, timeout=15)
             res.raise_for_status()
-            clean_text = res.json()['candidates'][0]['content']['parts'][0]['text'].strip()
+            raw_text = res.json()['candidates'][0]['content']['parts'][0]['text']
             
-            if clean_text.startswith("```json"):
-                clean_text = clean_text[7:-3].strip()
-            elif clean_text.startswith("```"):
-                clean_text = clean_text[3:-3].strip()
-                
+            # Use our bulletproof cleaner here
+            clean_text = self.clean_markdown_json(raw_text)
             return json.loads(clean_text)
         except Exception as e:
             return {"error": f"Failed to parse log signature: {str(e)}"}
 
     def query_gitlab_mcp_context(self, project_id: str, file_path: str) -> str:
-        # MCP tool proxy layer targeting remote repository contents
         if not GITLAB_TOKEN:
             return "Active GitLab routing token missing."
             
@@ -52,7 +62,6 @@ class AegisAgentEngine:
             return f"MCP bridging exception: {str(e)}"
 
     def generate_hotfix_patch(self, error_type: str, file_context: str, line: int) -> dict:
-        # Contextual reasoning loop to generate code patch optimization
         prompt = (
             f"A runtime exception ({error_type}) occurred on line {line}. "
             "Analyze the file context below, pinpoint the root vulnerability, and provide a patch. "
@@ -64,9 +73,9 @@ class AegisAgentEngine:
         try:
             res = requests.post(self.gemini_url, headers=self.headers, json=payload, timeout=20)
             res.raise_for_status()
-            clean_text = res.json()['candidates'][0]['content']['parts'][0]['text'].strip()
-            if clean_text.startswith("```json"):
-                clean_text = clean_text[7:-3].strip()
+            raw_text = res.json()['candidates'][0]['content']['parts'][0]['text']
+            
+            clean_text = self.clean_markdown_json(raw_text)
             return json.loads(clean_text)
         except Exception as e:
             return {"error": f"Patch synthesis pipeline failure: {str(e)}"}
