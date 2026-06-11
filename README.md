@@ -22,7 +22,5 @@ Before running the backend engine, ensure you have the following environment var
 
 1. Clone the project repository:
 ```bash
-   git clone [https://github.com/Rasul-projects/aegis-agent-devops.git](https://github.com/Rasul-projects/aegis-agent-devops.git)
-   cd aegis-agent-devops
-
-
+git clone [https://github.com/Rasul-projects/aegis-agent-devops.git](https://github.com/Rasul-projects/aegis-agent-devops.git)
+cd aegis-agent-devops
